@@ -1,0 +1,4 @@
+drone_env/
+__pycache__/
+*.pth
+*.npy
