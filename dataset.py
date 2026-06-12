@@ -1,6 +1,60 @@
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
+def compute_social_features(positions):
+    """
+    Compute Social Force inspired motion features from raw positions.
+    positions: (N, 3) array
+    returns: (N, 14) feature array
+    """
+    N = len(positions)
+    
+    # Velocity (first derivative of position)
+    velocity = np.zeros_like(positions)
+    velocity[1:] = positions[1:] - positions[:-1]
+    velocity[0] = velocity[1]
+    
+    # Acceleration (first derivative of velocity)
+    acceleration = np.zeros_like(velocity)
+    acceleration[1:] = velocity[1:] - velocity[:-1]
+    acceleration[0] = acceleration[1]
+    
+    # Speed (magnitude of velocity)
+    speed = np.sqrt(np.sum(velocity**2, axis=1, keepdims=True))
+    
+    # Heading angle in xy plane
+    heading = np.arctan2(
+        velocity[:, 1:2],
+        velocity[:, 0:1] + 1e-8
+    )
+    
+    # Destination force
+    destination_force = np.zeros_like(positions)
+    relaxation_time = 0.5
+    desired_speed = float(speed.mean())
+    
+    for i in range(N):
+        if i >= 4:
+            trend = positions[i] - positions[i-4]
+            trend_norm = np.linalg.norm(trend) + 1e-8
+            desired_direction = trend / trend_norm
+        else:
+            desired_direction = np.array([1.0, 0.0, 0.0])
+        
+        desired_velocity = desired_direction * desired_speed
+        destination_force[i] = (desired_velocity - velocity[i]) / relaxation_time
+    
+    # Concatenate all features
+    features = np.concatenate([
+        positions,           # (N, 3)
+        velocity,            # (N, 3)
+        acceleration,        # (N, 3)
+        speed,               # (N, 1)
+        heading,             # (N, 1)
+        destination_force,   # (N, 3)
+    ], axis=1)
+    
+    return features  # (N, 14)
 
 def simulate_drone(n_points=200, noise=0.5):
     t = np.linspace(0, 4*np.pi, n_points)
@@ -10,11 +64,14 @@ def simulate_drone(n_points=200, noise=0.5):
     return np.column_stack([x, y, z])
 
 def create_sliding_windows(trajectory, input_steps=20, output_steps=10):
-    x, y = [], []
+    # Compute rich features from raw positions
+    features = compute_social_features(trajectory)
+    
+    X, y = [], []
     for i in range(len(trajectory) - input_steps - output_steps):
-        x.append(trajectory[i:i+input_steps])
-        y.append(trajectory[i+input_steps:i+input_steps+output_steps])
-    return np.array(x), np.array(y)
+        X.append(features[i:i+input_steps])        # input: 14 features
+        y.append(trajectory[i+input_steps:i+input_steps+output_steps])  # output: raw x,y,z only
+    return np.array(X), np.array(y)
 
 class DroneDataset(Dataset):
     def __init__(self, n_trajectories=500, input_steps=20, output_steps=10):
