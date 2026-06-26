@@ -10,7 +10,7 @@ We calculate the metrics in two ways; ADE (Average Displacement Error) and FDE (
 
 | Model name | ADE | FDE |
 | --- | --- | --- |
-|Kalman Filter|| Kalman Filter, 2.4213 |Kalman Filter, 3.9685 | 
-|LSTM|| LSTM, 2.7209 | LSTM, 4.1753 | 
-|Transformer|| Transformer, 2.6791 | Transformer, 4.0752 | 
-|Social Force|| Social Force, 1.9569 |Social Force, 3.2349 | 
+|Kalman Filter| Kalman Filter, 2.4213 |Kalman Filter, 3.9685 | 
+|LSTM| LSTM, 2.7209 | LSTM, 4.1753 | 
+|Transformer| Transformer, 2.6791 | Transformer, 4.0752 | 
+|Social Force| Social Force, 1.9569 |Social Force, 3.2349 | 
