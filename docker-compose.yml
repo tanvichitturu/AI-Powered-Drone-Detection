@@ -1,0 +1,131 @@
+# ==============================================================
+# Drone Defense System — Docker Compose
+# ==============================================================
+# Usage:
+#   1. Copy .env.example to .env and set GROQ_API_KEY
+#   2. docker compose up --build
+#
+# Ports:
+#   - 5173  → Frontend (React dashboard)
+#   - 8000  → Coordinator API (FastAPI)
+#   - 8002  → Detection video stream (MJPEG)
+#   - 1883  → MQTT broker (Mosquitto)
+# ==============================================================
+
+services:
+
+  # ---- MQTT Broker ----
+  mosquitto:
+    image: eclipse-mosquitto:2
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    ports:
+      - "1883:1883"
+    networks:
+      - dronenet
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mosquitto_pub", "-h", "localhost", "-p", "1883", "-t", "healthcheck", "-n"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # ---- Agent 1: Detection (YOLO + Video Stream) ----
+  detection_agent:
+    build:
+      context: .
+      dockerfile: detection_agent/Dockerfile
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    ports:
+      - "8002:8002"
+    networks:
+      - dronenet
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('127.0.0.1',8002),timeout=2); s.close()\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ---- Agent 2: Tracking (ByteTrack) ----
+  tracking_agent:
+    build:
+      context: .
+      dockerfile: tracking_agent/Dockerfile
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      detection_agent:
+        condition: service_started
+    networks:
+      - dronenet
+    restart: unless-stopped
+
+  # ---- Agent 3: Threat Assessment + Prediction (PyTorch) ----
+  threat_agent:
+    build:
+      context: .
+      dockerfile: threat_agent/Dockerfile
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      tracking_agent:
+        condition: service_started
+    networks:
+      - dronenet
+    restart: unless-stopped
+
+  # ---- Agent 4: Coordinator (LangGraph + Groq LLM + FastAPI) ----
+  coordinator_agent:
+    build:
+      context: .
+      dockerfile: coordinator_agent/Dockerfile
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+      threat_agent:
+        condition: service_started
+    ports:
+      - "8000:8000"
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - MQTT_BROKER=mosquitto
+    networks:
+      - dronenet
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ---- Frontend (React/Vite → nginx) ----
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      coordinator_agent:
+        condition: service_healthy
+      detection_agent:
+        condition: service_healthy
+    networks:
+      - dronenet
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:80/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  dronenet:
+    driver: bridge

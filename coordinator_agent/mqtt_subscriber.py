@@ -1,11 +1,12 @@
 import json
+import os
 import paho.mqtt.client as mqtt
 import requests
 
-# FastAPI endpoint to forward alerts to
+# FastAPI endpoint to forward alerts to (same container via entrypoint.sh)
 API_URL = "http://localhost:8000/alerts"
 
-BROKER = "localhost"
+BROKER = os.environ.get("MQTT_BROKER", "localhost")
 PORT = 1883
 TOPIC = "drone/threat_alerts"
 

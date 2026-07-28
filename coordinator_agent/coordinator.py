@@ -177,7 +177,7 @@ def build_coordinator():
     )
     
     # Both paths end after responding
-    graph.add_edge("escalate", "respond_to_operator")
+    graph.add_edge("escalate", END)
     graph.add_edge("respond_to_operator", END)
     
     return graph.compile()

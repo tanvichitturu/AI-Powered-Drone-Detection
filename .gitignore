@@ -1,4 +1,7 @@
-drone_env/
+.env
+node_modules/
 __pycache__/
-*.pth
-*.npy
+*.pyc
+venv/
+.venv/
+dist/

@@ -1,0 +1,27 @@
+mqtt:
+  broker: "localhost"
+  port: 1883
+  subscribe_topic: "drone/raw_telemetry"
+  publish_topic: "drone/threat_alerts"
+
+prediction:
+  # Must match predictor.py's expected input window (it slices history[-20:])
+  history_length: 20
+
+# Passed directly into the real ThreatAssessmentAgent's constructor —
+# see threat_assessment.py for what each parameter does.
+threat_assessment:
+  restricted_zone_center: [0.0, 0.0, 0.0]
+  restricted_zone_radius: 120.0
+  warning_zone_radius: 250.0
+  protected_assets: []
+    # Example:
+    # - asset_id: 1
+    #   name: "Command building"
+    #   position: [25.0, 20.0, 0.0]
+    #   criticality: 1.0
+
+  # A drone with no new telemetry for this long is dropped from the active
+  # batch passed to assess_all() — prevents a drone that went silent from
+  # permanently inflating nearby_drone_count / staying on the dashboard.
+  stale_timeout_seconds: 5.0

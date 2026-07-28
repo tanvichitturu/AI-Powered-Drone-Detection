@@ -1,0 +1,10 @@
+detection:
+  camera_id: ptz-camera-north
+  confidence_threshold: 0.45
+  model_path: weights/yolo_drone_model.pt
+  source: 0
+  target_fps: 30
+mqtt:
+  broker: localhost
+  port: 1883
+  publish_topic: drone/raw_detections

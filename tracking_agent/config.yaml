@@ -1,0 +1,68 @@
+tracker:
+  # Base camera and physics settings
+  expected_fps: 30
+  
+  # How many historical frames to keep in memory for trajectory tails (RAM protection)
+  max_history_frames: 30
+  
+  # The maximum squared pixel distance allowed to match a detection to an ID
+  # (legacy: only used by the old distance-based strategy, kept for reference,
+  # not used by ByteTrack matching below)
+  match_threshold: 60.0
+  
+  # How many consecutive frames a drone can be missing before the ID is deleted
+  max_lost_grace_period: 15
+
+bytetrack:
+  # Confidence split point between "high" and "low" tier detections
+  high_conf_threshold: 0.5
+  
+  # Minimum IoU required to accept a match in stage 1 (high-conf vs all tracks)
+  match_iou_threshold: 0.3
+  
+  # Minimum IoU required to accept a match in stage 2 (low-conf vs tracks
+  # still unmatched after stage 1 — the "rescue" pass for occluded/blurred boxes)
+  low_conf_match_iou_threshold: 0.5
+
+kinematics:
+  # Exponential Moving Average (EMA) smoothing factor for velocity (0.0 to 1.0)
+  # Lower = smoother but lags behind. Higher = highly responsive but jittery.
+  ema_alpha: 0.3
+  
+  # Minimum speed (px/s) required before calculating a heading angle
+  stationary_speed_threshold: 5.0
+
+gmc_optical_flow:
+  # How often (in frames) to redetect background features for camera shake compensation
+  redetect_interval: 20
+  
+  # Maximum number of corners to track in the background
+  max_corners: 100
+  
+  # Quality threshold for background feature detection
+  quality_level: 0.3
+  
+  # Minimum pixel distance between tracked background features
+  min_distance: 7
+
+logging:
+  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: "INFO"
+  
+  # Maximum size of a single log file (in bytes) - currently 5MB
+  max_bytes: 5242880
+  
+  # How many historical log files to keep before deleting the oldest
+  backup_count: 3
+
+# Network broadcast coordinates for THIS agent (A2/Tracking).
+# subscribe_topic:  where A1/Detection publishes raw boxes (consumed here)
+# publish_topic:    where this agent publishes tracked telemetry (consumed by A3/Prediction)
+# NOTE: "drone/threat_alerts" is NOT this agent's topic — that belongs to
+# whatever agent publishes threat-scored output downstream. Do not repurpose
+# this block for that; keep each agent's own config scoped to its own topics.
+mqtt:
+  broker: "localhost"
+  port: 1883
+  subscribe_topic: "drone/raw_detections"
+  publish_topic: "drone/raw_telemetry"

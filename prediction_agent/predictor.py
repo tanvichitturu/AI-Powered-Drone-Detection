@@ -1,11 +1,14 @@
 import numpy as np
 import torch
 import os
-from transformer import DroneTransformer
-from dataset import compute_social_features
+import sys
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.append(BASE_DIR)
 
+from transformer import DroneTransformer
+from dataset import compute_social_features
 class PredictionAgent:
     def __init__(self):
         # Load normalization stats
@@ -30,10 +33,14 @@ class PredictionAgent:
     def predict(self, drone_id, position_history):
         """
         drone_id: int
-        position_history: list of at least 20 [x, y, z] positions
+        position_history: list of [x, y, z] positions (auto-padded if < 20)
         """
         positions = np.array(position_history)
         
+        # Ensure we have at least 2 positions to calculate speed safely
+        if len(positions) < 2:
+            positions = np.vstack([positions, positions])
+
         # Current position
         current_position = positions[-1].tolist()
         
@@ -44,6 +51,12 @@ class PredictionAgent:
         # Compute social features
         features = compute_social_features(positions)
         features_norm = (features - self.mean) / self.std
+        
+        # Pad features sequence if less than 20 steps are available
+        if len(features_norm) < 20:
+            padding = np.tile(features_norm[0], (20 - len(features_norm), 1))
+            features_norm = np.vstack([padding, features_norm])
+
         input_seq = torch.FloatTensor(features_norm[-20:]).unsqueeze(0)
         
         # Predict
@@ -62,12 +75,11 @@ class PredictionAgent:
             "predicted_trajectory": predicted_trajectory,
             "confidence": confidence
         }
+
     def predict_all(self, detections):
         results = []
         for drone_id, position_history in detections.items():
-            # Need at least 20 positions to predict
-            if len(position_history) < 20:
-                print(f"Drone {drone_id}: not enough history ({len(position_history)} points), skipping")
+            if not position_history:
                 continue
             result = self.predict(drone_id, position_history)
             results.append(result)

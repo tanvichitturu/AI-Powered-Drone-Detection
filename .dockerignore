@@ -1,0 +1,48 @@
+# ==============================================================
+# .dockerignore — Drone Defense System
+# ==============================================================
+# Applied to ALL builds since every service uses context: .
+# Keeps images lean and builds fast.
+# ==============================================================
+
+# Version control
+.git
+.gitignore
+
+# Python bytecode & virtual environments
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+venv/
+.venv/
+
+# Node artifacts (frontend installs its own in build stage)
+node_modules/
+
+# Frontend build output (built fresh inside container)
+dist/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Bolt metadata
+.bolt/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Environment files (secrets — passed via docker-compose, not baked into images)
+.env
+
+# Docker files themselves (no need to recurse)
+docker-compose.yml
+.dockerignore
+
+# Documentation (not needed at runtime)
+README.md
